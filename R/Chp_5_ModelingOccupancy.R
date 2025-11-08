@@ -56,4 +56,15 @@ ne_country_lines <- read_sf("data/gis-data.gpkg", "ne_country_lines") %>%
   st_geometry()
 ne_state_lines <- read_sf("data/gis-data.gpkg", "ne_state_lines") %>% 
   st_transform(crs = map_proj) %>% 
-  st_geometry(
+  st_geometry()
+
+
+#Sec 5.2 Data Prep ----
+
+#filter prior to creating occupancy model data
+ebird_filtered <- filter(ebird_habitat, 
+                         number_observers <= 5,
+                         year == max(year))
+
+# 5.2.1 Data formatting ----
+
