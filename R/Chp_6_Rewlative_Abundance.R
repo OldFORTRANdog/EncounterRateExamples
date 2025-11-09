@@ -60,3 +60,44 @@ ne_country_lines <- read_sf("data/gis-data.gpkg", "ne_country_lines") %>%
 ne_state_lines <- read_sf("data/gis-data.gpkg", "ne_state_lines") %>% 
   st_transform(crs = map_proj) %>% 
   st_geometry()
+
+# 6.2.1 Spatiotemporal subsampling ----
+
+# generate hexagonal grid with ~ 5 km betweeen cells
+dggs <- dgconstruct(spacing = 5)
+# get hexagonal cell id and week number for each checklist
+checklist_cell <- ebird_habitat %>% 
+  mutate(cell = dgGEO_to_SEQNUM(dggs, longitude, latitude)$seqnum,
+         week = week(observation_date))
+# sample one checklist per grid cell per week
+# sample detection/non-detection independently 
+ebird_ss <- checklist_cell %>% 
+  group_by(species_observed, year, week, cell) %>% 
+  sample_n(size = 1) %>% 
+  ungroup() %>% 
+  select(-cell, -week)
+
+# 6.2.2 Test train split ----
+hab_covs <- c("pland_04_deciduous_broadleaf", 
+              "pland_05_mixed_forest",
+              "pland_12_cropland",
+              "pland_13_urban")
+ebird_split <- ebird_ss %>% 
+  # select only the columns to be used in the model
+  select(observation_count,
+         # effort covariates
+         day_of_year, time_observations_started, duration_minutes,
+         effort_distance_km, number_observers, protocol_type,
+         # habitat covariates
+         hab_covs) 
+# split 80/20
+ebird_split <- ebird_split %>% 
+  split(if_else(runif(nrow(.)) <= 0.8, "train", "test"))
+map_int(ebird_split, nrow)
+#>  test train 
+#>  3941 16145
+
+
+# 6.3 Exploratory data analysis ----
+
+
